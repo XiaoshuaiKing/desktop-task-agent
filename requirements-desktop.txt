@@ -1,0 +1,6 @@
+# Optional Windows tool dependencies; only install the tools you actually use.
+pyautogui
+pyperclip
+pywinauto
+playwright
+psutil

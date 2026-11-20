@@ -1,0 +1,327 @@
+from tools.tools import (
+    open_vscode,open_wps,open_software,find_latest_document,close_software,
+    list_browser_tabs,open_website,smart_web_operate,extract_web_content,click_web_element,close_website,
+    get_screenshot,read_clipboard,write_clipboard,set_reminder,find_and_open_file,
+    send_file_to_email,send_file_to_qq,manage_window,inspect_window_ui,operate_window_ui,
+    read_text_file,write_text_file,rename_file,press_keys,call_vscode_claude,
+    click_mouse,scroll_mouse,read_task_original
+)
+
+TOOL_REGISTRY={
+    "open_vscode":open_vscode,
+    "open_wps":open_wps,
+    "open_software":open_software,
+    "find_latest_document":find_latest_document,
+    "close_software":close_software,
+    "list_browser_tabs":list_browser_tabs,
+    "open_website":open_website,
+    "smart_web_operate":smart_web_operate,
+    "extract_web_content":extract_web_content,
+    "click_web_element":click_web_element,
+    "close_website":close_website,
+    "get_screenshot":get_screenshot,
+    "read_clipboard":read_clipboard,
+    "write_clipboard":write_clipboard,
+    "set_reminder":set_reminder,
+    "find_and_open_file":find_and_open_file,
+    "send_file_to_email":send_file_to_email,
+    "send_file_to_qq":send_file_to_qq,
+    "manage_window":manage_window,
+    "inspect_window_ui":inspect_window_ui,
+    "operate_window_ui":operate_window_ui,
+    "read_text_file":read_text_file,
+    "write_text_file":write_text_file,
+    "rename_file":rename_file,
+    "press_keys":press_keys,
+    "call_vscode_claude":call_vscode_claude,
+    "click_mouse":click_mouse,
+    "read_task_original":read_task_original,
+    "scroll_mouse":scroll_mouse
+}
+
+TOOL_SCHEMAS=[
+    {
+        "type":"function",
+        "function":{
+            "name":"list_browser_tabs",
+            "description":"列出 Edge/Chrome 当前窗口中的标签页标题；当前活动标签页会附带 UIA 可读取的 URL。浏览器未运行时会正常启动浏览器，不使用 CDP 或远程调试端口。",
+            "parameters":{"type":"object","properties":{
+                "keyword":{"type":"string","description":"标题或网址关键词，可省略"},
+                "browser_name":{"type":"string","enum":["edge","chrome"]}
+            },"required":[]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"open_vscode",
+            "description":"【打开VSCode】启动VSCode代码编辑器。如果用户要求打开VSCode或代码编辑环境时使用。",
+            "parameters":{"type":"object","properties":{"project_path":{"type":"string"}},"required":[]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"open_wps",
+            "description":"【打开WPS】打开WPS办公软件或指定文档。如果有具体文件路径，请通过file_path参数传入。",
+            "parameters":{"type":"object","properties":{"file_path":{"type":"string"}},"required":[]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"open_software",
+            "description":"【打开软件】启动Windows应用程序。例如：记事本、微信、计算器。若要执行网页打开、搜索或网页操作，优先使用对应网页工具；不要先单独打开浏览器再调用网页工具。",
+            "parameters":{"type":"object","properties":{"name":{"type":"string","description":"软件名称，如 微信、计算器、chrome、vscode"}},"required":["name"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"find_latest_document",
+            "description":"【本地文件雷达】扫描电脑，返回最新修改的办公文档的绝对路径。可将此路径传给 open_wps。",
+            "parameters":{"type":"object","properties":{},"required":[]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"close_software",
+            "description":"【软件进程关闭】关闭指定的本地软件。仅当用户明确授权强制关闭时，才将 force_execute 设为 true。",
+            "parameters":{"type":"object","properties":{
+                "app_name":{"type":"string","description":"软件名称"},
+                "force_execute":{"type":"boolean","description":"是否强制结束进程"}
+            },"required":["app_name"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"open_website",
+            "description":"【打开网页】通过 UIA 和键盘操作启动或复用浏览器并打开指定网址。当前页为空白页时复用当前页；当前页有内容时新建标签页。默认 Edge，不使用 CDP 或远程调试端口。",
+            "parameters":{"type":"object","properties":{"url":{"type":"string","description":"完整 URL，包含 https://"},"browser_name":{"type":"string","enum":["edge","chrome"],"description":"浏览器类型；用户明确指定时传 edge 或 chrome，省略默认 edge"}},"required":["url"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"smart_web_operate",
+            "description":"【网页搜索】搜索引擎（百度、Bing、Google、搜狗、360、Yahoo）直接构造搜索结果 URL 并导航，不操作网页搜索框；其他网站才使用 UIA 输入框。默认 Edge。",
+            "parameters":{"type":"object","properties":{
+                "url":{"type":"string","description":"搜索引擎首页或目标网页 URL，例如 https://www.baidu.com、https://www.bing.com"},
+                "css_selector":{"type":"string","description":"普通网页输入框的 UIA 定位提示；搜索引擎直达搜索时无需提供，保留此参数用于兼容旧调用"},
+                "keyword":{"type":"string","description":"搜索关键词或需要输入网页的文本"},
+                "browser_name":{"type":"string","enum":["edge","chrome"],"description":"浏览器类型；用户明确指定时传 edge 或 chrome，省略默认 edge"}
+            },"required":["url","keyword"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"extract_web_content",
+            "description":"【网页内容提取】通过 UIA DocumentControl 读取网页正文。css_selector 仅作为 UIA 属性筛选提示，支持 body、#AutomationId、.ClassName；不执行 CSS 查询。文本过长会自动截断。默认 Edge。",
+            "parameters":{"type":"object","properties":{
+                "url":{"type":"string"},
+                "css_selector":{"type":"string","description":"UIA 属性筛选提示：body 表示正文；#id 匹配 AutomationId；.class 匹配 ClassName。不是浏览器 CSS 选择器"},
+                "browser_name":{"type":"string","enum":["edge","chrome"],"description":"浏览器类型；用户明确指定时传 edge 或 chrome，省略默认 edge"}
+            },"required":["url","css_selector"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"click_web_element",
+            "description":"【网页点击工具】通过 UIA 按可见文字、#AutomationId 或 .ClassName 定位并点击网页按钮、链接等元素。默认 Edge。",
+            "parameters":{"type":"object","properties":{
+                "url":{"type":"string"},
+                "keyword_or_selector":{"type":"string","description":"网页可见文字、#AutomationId 或 .ClassName；尽量提供唯一且具体的目标"},
+                "browser_name":{"type":"string","enum":["edge","chrome"],"description":"浏览器类型；用户明确指定时传 edge 或 chrome，省略默认 edge"}
+            },"required":["url","keyword_or_selector"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"close_website",
+            "description":"【关闭特定标签页】通过 UIA 标签页标题定位唯一匹配项，再使用 Ctrl+W 关闭。默认 Edge。",
+            "parameters":{"type":"object","properties":{"keyword":{"type":"string","description":"标签页标题关键词；若 UIA 未暴露标签标题，则可匹配当前页网址"},"browser_name":{"type":"string","enum":["edge","chrome"],"description":"浏览器类型；用户明确指定时传 edge 或 chrome，省略默认 edge"}},"required":["keyword"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"get_screenshot",
+            "description":"【系统屏幕快照】仅当用户明确要求截屏、看屏幕时调用。截图会通过 QQ 发给当前用户。",
+            "parameters":{"type":"object","properties":{},"required":[]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"read_clipboard",
+            "description":"【读取剪贴板】读取用户当前系统剪贴板中的文本。",
+            "parameters":{"type":"object","properties":{},"required":[]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"write_clipboard",
+            "description":"【写入剪贴板】把指定文本写入系统剪贴板。",
+            "parameters":{"type":"object","properties":{"text":{"type":"string","description":"准备写入剪贴板的文本"}},"required":["text"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"set_reminder",
+            "description":"【定时提醒】当用户要求几秒、几分钟或几小时后提醒时调用。",
+            "parameters":{"type":"object","properties":{
+                "time_str":{"type":"string","description":"延迟时间，如 10s、5m、1h"},
+                "content":{"type":"string","description":"提醒内容"}
+            },"required":["time_str","content"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"find_and_open_file",
+            "description":"在电脑上搜索文件。如果后续要发送文件，请将 auto_open 设为 false，只获取真实路径。",
+            "parameters":{"type":"object","properties":{
+                "filename":{"type":"string","description":"要搜索的文件名"},
+                "auto_open":{"type":"boolean","description":"是否自动打开文件"}
+            },"required":["filename"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"send_file_to_email",
+            "description":"将电脑里的文件通过邮件发送。应先获得文件真实绝对路径。",
+            "parameters":{"type":"object","properties":{
+                "filepath":{"type":"string","description":"文件绝对路径"},
+                "target_email":{"type":"string","description":"可选目标邮箱"}
+            },"required":["filepath"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"send_file_to_qq",
+            "description":"【QQ直传】直接将本地图片、视频或语音文件通过 QQ 发给当前用户。文件限制 5MB。",
+            "parameters":{"type":"object","properties":{"filepath":{"type":"string","description":"文件绝对路径"}},"required":["filepath"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"manage_window",
+            "description":"【窗口管理】只管理已经打开的软件窗口。用于最大化、最小化窗口。不要用于回到桌面、系统快捷键操作。",
+            "parameters":{"type":"object","properties":{
+                "keyword":{"type":"string","description":"窗口标题或进程名关键字"},
+                "action":{"type":"string","enum":["maximize","minimize"]},
+                "window_index":{"type":"integer","description":"匹配窗口序号，从0开始"}
+            },"required":["action"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"inspect_window_ui",
+            "description":"【系统 UI 透视】扫描指定桌面软件窗口中的可交互控件。",
+            "parameters":{"type":"object","properties":{"keyword":{"type":"string","description":"窗口标题关键字"}},"required":["keyword"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"operate_window_ui",
+            "description":"【窗口控件操作】操作软件内部按钮、输入框等UI元素。不要用于系统快捷键。",
+            "parameters":{"type":"object","properties":{
+                "keyword":{"type":"string","description":"窗口标题关键字"},
+                "element_name":{"type":"string","description":"控件名称"},
+                "action":{"type":"string","enum":["click","write"]},
+                "text_value":{"type":"string","description":"写入文本，点击时可省略"}
+            },"required":["keyword","element_name","action"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"read_text_file",
+            "description":"【文件阅读器】读取 txt、py、md、json、log、csv 等文本文件内容。",
+            "parameters":{"type":"object","properties":{"filepath":{"type":"string","description":"文件绝对路径"}},"required":["filepath"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"write_text_file",
+            "description":"【文件写入器】创建新文件或覆写已有纯文本文件。",
+            "parameters":{"type":"object","properties":{
+                "filepath":{"type":"string","description":"文件绝对路径"},
+                "content":{"type":"string","description":"完整文本内容"}
+            },"required":["filepath","content"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"rename_file",
+            "description":"【文件改名】重命名指定文件。new_name 只给文件名，不含路径。",
+            "parameters":{"type":"object","properties":{
+                "old_path":{"type":"string","description":"原文件完整路径"},
+                "new_name":{"type":"string","description":"新文件名"}
+            },"required":["old_path","new_name"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"press_keys",
+            "description":"【系统快捷键】执行键盘快捷操作。例如win+d回到桌面、alt+f4关闭窗口、ctrl+c复制。涉及系统快捷键时优先使用。",
+            "parameters":{"type":"object","properties":{
+                "keys":{"type":"string","description":"按键内容"},
+                "delay":{"type":"number","description":"按键前等待秒数，默认0.5"}
+            },"required":["keys"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"call_vscode_claude",
+            "description":"【VSCode Claude】把复杂代码修改、脚本开发或系统排查任务交给 VSCode 中的 Claude。",
+            "parameters":{"type":"object","properties":{"task":{"type":"string","description":"具体任务"}},"required":["task"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"click_mouse",
+            "description":"【鼠标点击】在当前鼠标位置执行点击。",
+            "parameters":{"type":"object","properties":{
+                "clicks":{"type":"integer","description":"点击次数，默认1"},
+                "button":{"type":"string","enum":["left","right","middle"],"description":"鼠标键，默认left"}
+            },"required":[]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"scroll_mouse",
+            "description":"【鼠标滚轮】滚动鼠标滚轮。正数向上，负数向下。",
+            "parameters":{"type":"object","properties":{"clicks":{"type":"integer","description":"滚动格数"}},"required":["clicks"]}
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"read_task_original",
+            "description":"【回查任务原文】读取某个任务的原始请求全文。上下文被压缩导致目标只剩摘要/引用时，用它取回用户原话，确认约束后再执行不可撤销操作。",
+            "parameters":{"type":"object","properties":{
+                "task_id":{"type":"string","description":"任务 ID"},
+                "max_chars":{"type":"integer","description":"最多返回多少字，默认4000"}
+            },"required":["task_id"]}
+        }
+    }
+]
